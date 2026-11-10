@@ -4,10 +4,12 @@
 #   sudo deploy/mosquitto/add_gateway.sh --ingest           # compte du service d'ingestion
 # Le mot de passe est affiché UNE fois (à saisir dans l'application) ; Mosquitto n'en garde que le hash.
 set -euo pipefail
-DIR=${OVERMIND_MQTT_DIR:-/etc/mosquitto/overmind}
-PASSWD="$DIR/passwd"; ACL="$DIR/acl"
+# Emplacements lisibles par le profil AppArmor de Mosquitto (Ubuntu) : /etc/mosquitto/* uniquement.
+DIR=${OVERMIND_MQTT_DIR:-/etc/mosquitto}
+PASSWD="$DIR/overmind_passwd"; ACL="$DIR/overmind_acl"
 command -v mosquitto_passwd >/dev/null || { echo "mosquitto_passwd introuvable (apt install mosquitto)"; exit 1; }
-mkdir -p "$DIR"; touch "$PASSWD" "$ACL"; chmod 640 "$PASSWD"
+mkdir -p "$DIR"; touch "$PASSWD" "$ACL"; chmod 640 "$PASSWD" "$ACL"
+getent group mosquitto >/dev/null && chgrp mosquitto "$PASSWD" "$ACL"
 re='^[a-z0-9_-]{1,64}$'
 if [[ "${1:-}" == "--ingest" ]]; then
   user=overmind-ingest

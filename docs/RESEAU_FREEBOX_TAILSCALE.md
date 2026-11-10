@@ -33,9 +33,8 @@ tailscale status           # nom MagicDNS, ex. ge75.tail1234.ts.net
 
 ```bash
 sudo apt install mosquitto mosquitto-clients
-sudo mkdir -p /etc/mosquitto/overmind
 sudo cp deploy/mosquitto/mosquitto.conf /etc/mosquitto/conf.d/overmind-obd.conf
-sudo cp deploy/mosquitto/acl.example /etc/mosquitto/overmind/acl
+# Fichiers dans /etc/mosquitto/ directement : le profil AppArmor d'Ubuntu bloque les sous-dossiers.
 # Remplacer 100.64.0.1 (EXEMPLE) par l'IP de `tailscale ip -4` ; commenter le listener 8883
 # si le mode B n'est pas utilisé.
 sudo deploy/mosquitto/add_gateway.sh android_01 slk_r171     # crée l'utilisateur + ACL, affiche le mot de passe une fois
@@ -93,13 +92,31 @@ certificat reconnu (Let's Encrypt).
 ```bash
 sudo apt install certbot
 sudo certbot certonly --standalone -d obd.mondomaine.fr     # EXEMPLE de domaine
-sudo install -d -m 750 -o mosquitto /etc/mosquitto/overmind/tls
-sudo cp /etc/letsencrypt/live/obd.mondomaine.fr/{fullchain,privkey}.pem /etc/mosquitto/overmind/tls/
-sudo chown mosquitto /etc/mosquitto/overmind/tls/*.pem
+sudo install -m 640 -g mosquitto /etc/letsencrypt/live/obd.mondomaine.fr/fullchain.pem /etc/mosquitto/certs/overmind_fullchain.pem
+sudo install -m 640 -g mosquitto /etc/letsencrypt/live/obd.mondomaine.fr/privkey.pem   /etc/mosquitto/certs/overmind_privkey.pem
 ```
 
 (Le défi HTTP de certbot nécessite temporairement le port 80 ; sinon utiliser un défi DNS.
 Prévoir un hook de renouvellement qui recopie les fichiers et recharge Mosquitto.)
+
+**Variante sans nom de domaine : CA privée.** Avec une IPv4 fixe Free, on peut signer
+soi-même un certificat dont le SAN contient l'IP publique, et coller la CA dans l'appli
+(Réglages → « Certificat CA ») : la vérification reste stricte, sans dépendre d'un domaine.
+
+```bash
+umask 077; mkdir -p ~/.config/overmind/ca && cd ~/.config/overmind/ca   # la clé de la CA reste ici
+IP=$(curl -4 -s https://ifconfig.me)
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 3650 \
+  -subj "/CN=Overmind OBD CA" -keyout ca.key -out ca.crt \
+  -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign"
+openssl req -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -subj "/CN=$IP" -keyout server.key -out server.csr
+printf 'basicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\nsubjectAltName=IP:%s,IP:127.0.0.1\n' "$IP" > ext.cnf
+openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 825 -extfile ext.cnf -out server.crt
+sudo install -m 640 -g mosquitto server.crt /etc/mosquitto/certs/overmind_fullchain.pem
+sudo install -m 640 -g mosquitto server.key /etc/mosquitto/certs/overmind_privkey.pem
+```
+
+Si l'IP publique change, il faut refaire le certificat serveur (pas la CA).
 
 ### 2. Redirection de port Freebox
 
@@ -110,8 +127,18 @@ Prévoir un hook de renouvellement qui recopie les fichiers et recharge Mosquitt
    - Protocole : **TCP** ; port de début/fin : **8883** ; port de destination : **8883**.
    - Commentaire : « MQTT TLS Overmind OBD ».
 3. **Ne rediriger que 8883.** Pas 1883, pas 8095, pas 8796.
-4. Sur les Freebox récentes, l'IPv4 peut être partagée (« IP full-stack » à demander dans
-   l'espace abonné Free) : sans IP full-stack, les ports disponibles sont restreints.
+4. **IPv4 partagée (cas par défaut des Freebox récentes)** : la Freebox refuse les ports
+   externes hors de la plage attribuée à la box (ex. **32768–49151**, visible dans
+   Paramètres → Mode réseau, ou `remote_access_min_port`/`max_port` de l'API). Dans ce cas,
+   choisir un port externe dans la plage et le rediriger vers 8883 :
+   port de début/fin **38883** → port de destination **8883**, puis régler l'appli sur le
+   port **38883**. Alternative : demander une « IP full-stack » dans l'espace abonné Free.
+
+Vérifier depuis un réseau extérieur (4G/5G, Wi-Fi coupé) :
+
+```bash
+openssl s_client -connect <IP_publique>:38883 -CAfile ~/.config/overmind/ca/ca.crt -verify_ip <IP_publique> </dev/null
+```
 
 ### 3. Téléphone
 
