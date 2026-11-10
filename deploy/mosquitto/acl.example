@@ -1,0 +1,15 @@
+# ACL Mosquitto Overmind OBD — un utilisateur MQTT par passerelle (= gateway_id).
+# Une passerelle n'a que des droits d'ÉCRITURE sur les topics de SES véhicules, et AUCUN droit de
+# lecture : aucune commande ne peut lui parvenir. Généré/complété par add_gateway.sh.
+
+# Compte du service d'ingestion : lecture seule.
+user overmind-ingest
+topic read overmind/vehicles/+/obd/#
+topic read overmind/vehicles/+/gateway/health
+
+# --- passerelle android_01 (EXEMPLE) ---
+user android_01
+topic write overmind/vehicles/slk_r171/obd/telemetry
+topic write overmind/vehicles/slk_r171/obd/dtc
+topic write overmind/vehicles/slk_r171/obd/status
+topic write overmind/vehicles/slk_r171/gateway/health

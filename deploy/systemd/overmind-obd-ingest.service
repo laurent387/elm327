@@ -1,0 +1,16 @@
+[Unit]
+Description=Overmind OBD — ingestion MQTT seule (sans API ; alternative à overmind-obd-api)
+After=network-online.target
+Conflicts=overmind-obd-api.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/elm327/overmind
+EnvironmentFile=%h/.config/overmind/obd.env
+ExecStart=%h/elm327/overmind/.venv/bin/python -m overmind_obd.ingest
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

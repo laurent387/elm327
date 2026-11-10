@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aucun trafic HTTP en clair. MQTT utilise des sockets brutes : TLS est imposé par le code
+     en mode Internet direct ; en mode Tailscale le tunnel WireGuard chiffre déjà le transport. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

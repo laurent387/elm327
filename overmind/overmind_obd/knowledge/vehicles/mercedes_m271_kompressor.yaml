@@ -1,0 +1,22 @@
+# Fiche motorisation — Mercedes M271 Kompressor (1.8 L, compresseur volumétrique Eaton, SLK R171 200K).
+# ⚠️ VALEURS TYPIQUES À VÉRIFIER : ordres de grandeur indicatifs, non issus d'une documentation
+# constructeur validée. L'agent doit les présenter comme repères, jamais comme des seuils officiels.
+engine: M271 Kompressor
+fuel: petrol
+aspiration: supercharger
+displacement_l: 1.8
+cylinders: 4
+verified: false
+typical:
+  idle_rpm: [650, 800]            # à vérifier
+  coolant_operating_c: [85, 105]  # à vérifier
+  idle_map_kpa_abs: [30, 45]      # à vérifier (capteur après papillon)
+  boost_max_kpa_rel: [40, 70]     # à vérifier ; n'a de sens que si le capteur lu est après le compresseur
+  maf_idle_g_s: [3, 6]            # à vérifier
+notes:
+  - "Le compresseur dispose d'une vanne de bypass (dépression) : au ralenti et à charge partielle, la pression après compresseur reste proche de celle du collecteur."
+  - "L'emplacement exact du capteur exposé par le PID 010B doit être confirmé sur le véhicule : le PID générique MAP ne garantit pas une mesure après le compresseur."
+  - "Chaîne de distribution et pignons de déphaseurs : surveiller P0016/P0017 (à vérifier selon millésime)."
+dtc:
+  P0016:
+    note: "Sur M271, souvent associé à l'allongement de la chaîne ou à l'usure des pignons de déphaseur (à vérifier). Contrôle de calage obligatoire avant tout remplacement."

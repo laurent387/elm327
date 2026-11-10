@@ -1,0 +1,10 @@
+paho-mqtt>=2.0
+jsonschema>=4.20
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pyyaml>=6.0
+mcp>=1.10,<2   # API FastMCP (v1), comme ~/hovermind/orchestrator
+# tests
+pytest>=8
+httpx>=0.27
+amqtt>=0.11 ; python_version >= "3.10"

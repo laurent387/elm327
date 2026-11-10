@@ -1,0 +1,1 @@
+{"schema_version":"1.0","kind":"health","message_id":"3178f64e-661d-48ab-acec-70fb07126c39","vehicle_id":"slk_r171","gateway_id":"android_01","session_id":null,"timestamp":"2026-11-10T16:45:00Z","sequence":3,"engine_type":"petrol","health":{"state":"online","battery_pct":80,"bt_connected":true}}

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://overmind.local/schemas/overmind_obd/1.0",
+  "title": "Overmind OBD gateway message v1.0",
+  "type": "object",
+  "required": ["schema_version", "kind", "vehicle_id", "gateway_id"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "kind": {"enum": ["telemetry", "dtc", "status", "health"]},
+    "message_id": {"type": "string", "pattern": "^[0-9a-fA-F-]{36}$"},
+    "vehicle_id": {"$ref": "#/$defs/ident"},
+    "gateway_id": {"$ref": "#/$defs/ident"},
+    "session_id": {"type": ["string", "null"], "maxLength": 64},
+    "sequence": {"type": "integer", "minimum": 0},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "engine_type": {"enum": ["petrol", "diesel", "unknown"]},
+    "data": {"type": "object", "additionalProperties": {"type": "number"}},
+    "measurements": {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/measurement"}},
+    "context": {"type": "object"},
+    "dtc": {"$ref": "#/$defs/dtc"},
+    "status": {"type": "object"},
+    "health": {"type": "object", "required": ["state"]}
+  },
+  "allOf": [
+    {"if": {"properties": {"kind": {"const": "telemetry"}}},
+     "then": {"required": ["message_id", "sequence", "timestamp", "data", "measurements"]}},
+    {"if": {"properties": {"kind": {"const": "dtc"}}},
+     "then": {"required": ["message_id", "sequence", "timestamp", "dtc"]}},
+    {"if": {"properties": {"kind": {"const": "status"}}},
+     "then": {"required": ["message_id", "sequence", "timestamp", "status"]}},
+    {"if": {"properties": {"kind": {"const": "health"}}},
+     "then": {"required": ["health"]}}
+  ],
+  "$defs": {
+    "ident": {"type": "string", "pattern": "^[a-z0-9_\\-]{1,64}$"},
+    "measurement": {
+      "type": "object",
+      "required": ["key", "status", "ts"],
+      "properties": {
+        "key": {"type": "string", "maxLength": 64},
+        "pid": {"type": ["string", "null"], "pattern": "^[0-9A-F]{4,6}$"},
+        "value": {"type": ["number", "null"]},
+        "unit": {"type": ["string", "null"]},
+        "ts": {"type": "string", "format": "date-time"},
+        "source": {"type": "string"},
+        "status": {"enum": ["ok", "no_data", "error", "unsupported", "stale"]}
+      }
+    },
+    "dtcItem": {
+      "type": "object",
+      "required": ["code"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^[PCBU][0-9A-F]{4}$"},
+        "ecu": {"type": ["string", "null"]}
+      }
+    },
+    "dtcList": {"type": ["array", "null"], "items": {"$ref": "#/$defs/dtcItem"}},
+    "dtc": {
+      "type": "object",
+      "required": ["stored", "pending", "permanent"],
+      "properties": {
+        "mil_on": {"type": ["boolean", "null"]},
+        "stored": {"$ref": "#/$defs/dtcList"},
+        "pending": {"$ref": "#/$defs/dtcList"},
+        "permanent": {"$ref": "#/$defs/dtcList"},
+        "read_at": {"type": "string"}
+      }
+    }
+  }
+}

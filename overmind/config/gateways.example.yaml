@@ -1,0 +1,22 @@
+# Registre des passerelles et véhicules Overmind OBD.
+# Copier vers ~/.config/overmind/obd_gateways.yaml (ou OVERMIND_OBD_REGISTRY).
+# VALEURS D'EXEMPLE : à adapter à votre véhicule réel.
+
+vehicles:
+  slk_r171:
+    label: "Mercedes SLK R171 (exemple)"
+    engine_type: petrol            # petrol | diesel | unknown
+    aspiration: supercharger       # na | turbo | supercharger
+    # Emplacement réel du capteur MAP lu par le PID 010B :
+    # post_compressor | pre_throttle | intake_manifold | unknown
+    map_sensor_location: unknown
+    manufacturer: mercedes
+    engine_code: m271_kompressor   # fichier knowledge/vehicles/mercedes_m271_kompressor.yaml
+    displacement_l: 1.8
+    cylinders: 4
+
+gateways:
+  android_01:
+    label: "Téléphone Android de bord (exemple)"
+    vehicles: [slk_r171]
+    enabled: true

@@ -1,0 +1,1 @@
+{"schema_version":"1.0","kind":"dtc","message_id":"3c3fca6f-c26a-45e4-a605-072c680dc556","vehicle_id":"slk_r171","gateway_id":"android_01","session_id":"s","timestamp":"2026-11-10T16:45:00Z","sequence":1,"engine_type":"petrol","dtc":{"mil_on":true,"stored":[{"code":"P0171","ecu":"7E8"}],"pending":[],"permanent":null,"read_at":"2026-11-10T16:45:00Z"}}

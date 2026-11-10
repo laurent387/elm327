@@ -1,0 +1,15 @@
+[Unit]
+Description=Overmind OBD — serveur MCP lecture seule (:8796)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/elm327/overmind
+EnvironmentFile=%h/.config/overmind/obd.env
+ExecStart=%h/elm327/overmind/.venv/bin/python -m overmind_obd.mcp_server
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

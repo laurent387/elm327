@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overmind OBD — Live</title>
+<style>
+  :root { --bg:#0b0f14; --panel:#131a22; --line:#22303d; --text:#e6edf3; --muted:#8b98a5; --accent:#38bdf8;
+          --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); }
+  h1 { font-size:17px; margin:0 12px 0 0; letter-spacing:.04em; }
+  select, input, button { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 10px; font:inherit; }
+  button { cursor:pointer; }
+  .pill { padding:3px 10px; border-radius:99px; font-size:13px; background:var(--panel); border:1px solid var(--line); }
+  .pill.ok { color:var(--ok); border-color:var(--ok); } .pill.warn { color:var(--warn); border-color:var(--warn); }
+  .pill.bad { color:var(--bad); border-color:var(--bad); }
+  main { padding:16px; display:grid; gap:12px; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; min-width:0; }
+  .card h2 { margin:0; font-size:13px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  .val { font-size:38px; font-weight:600; font-variant-numeric:tabular-nums; margin:4px 0; }
+  .val small { font-size:15px; color:var(--muted); font-weight:400; margin-left:4px; }
+  .val.stale { color:var(--muted); }
+  .meta { font-size:12px; color:var(--muted); min-height:1.4em; }
+  canvas { width:100%; height:60px; display:block; }
+  .wide { grid-column:1 / -1; }
+  #dtc li { margin:4px 0; } code { color:var(--accent); }
+  #login { max-width:420px; margin:60px auto; padding:16px; }
+  #login input { width:100%; margin:8px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>OVERMIND · OBD LIVE</h1>
+  <select id="vehicle" aria-label="Véhicule"></select>
+  <span id="ws" class="pill">hors ligne</span>
+  <span id="gw" class="pill">passerelle ?</span>
+  <span id="elm" class="pill">ELM327 ?</span>
+  <span style="flex:1"></span>
+  <button id="logout" type="button">Changer de jeton</button>
+</header>
+<section id="login" class="card" hidden>
+  <h2>Jeton d'accès API</h2>
+  <p class="meta">Créer un jeton : <code>python -m overmind_obd.tokens create dashboard --scopes api</code>.
+  Il reste dans le stockage local de ce navigateur.</p>
+  <input id="token" type="password" autocomplete="off" placeholder="jeton">
+  <button id="go" type="button">Se connecter</button>
+</section>
+<main id="grid"></main>
+<script>
+"use strict";
+const METRICS = [
+  ["rpm", "Régime", "tr/min", 0], ["speed_kmh", "Vitesse", "km/h", 0], ["engine_load_pct", "Charge moteur", "%", 0],
+  ["map_kpa_absolute", "MAP absolue", "kPa", 0], ["boost_kpa_relative", "Pression relative (MAP−BARO)", "kPa", 0],
+  ["coolant_temp_c", "Liquide refroid.", "°C", 0], ["intake_air_temp_c", "Air admission", "°C", 0],
+  ["maf_g_s", "Débit d'air MAF", "g/s", 1], ["throttle_pct", "Papillon", "%", 0],
+  ["short_fuel_trim_b1_pct", "STFT B1", "%", 1], ["long_fuel_trim_b1_pct", "LTFT B1", "%", 1], ["baro_kpa", "BARO", "kPa", 0],
+];
+const HIST = 240, STALE_MS = 10000;
+const grid = document.getElementById("grid"), sel = document.getElementById("vehicle");
+const series = {}, cards = {};
+let ws = null, vehicle = null, retry = 1000;
+let token = null;
+try { token = localStorage.getItem("obd_token"); } catch (e) {}
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function pill(id, text, cls) { const p = document.getElementById(id); p.textContent = text; p.className = "pill " + (cls || ""); }
+
+function buildGrid() {
+  grid.textContent = "";
+  for (const [key, label, unit] of METRICS) {
+    const c = el("div", "card"); c.append(el("h2", null, label));
+    const v = el("div", "val stale", "—"); const meta = el("div", "meta", "aucune donnée"); const cv = el("canvas");
+    c.append(v, meta, cv); grid.append(c); cards[key] = { v, meta, cv, unit }; series[key] = [];
+  }
+  const d = el("div", "card wide"); d.append(el("h2", null, "Codes défauts"));
+  const ul = el("ul"); ul.id = "dtc"; ul.append(el("li", "meta", "aucune lecture reçue")); d.append(ul); grid.append(d);
+}
+
+function fmt(v, dec) { return v == null ? "—" : Number(v).toFixed(dec); }
+
+function setValue(key, value, ts, status, source) {
+  const c = cards[key]; if (!c) return;
+  const m = METRICS.find(x => x[0] === key);
+  c.v.textContent = ""; c.v.append(document.createTextNode(fmt(value, m[3])));
+  const s = el("small", null, c.unit); c.v.append(s);
+  c.v.dataset.ts = ts ? Date.parse(ts) : 0;
+  c.v.classList.toggle("stale", value == null);
+  c.meta.textContent = (status && status !== "ok" ? status + " · " : "") + (source || "") + (ts ? " · " + new Date(ts).toLocaleTimeString() : "");
+  if (value != null) { series[key].push(value); if (series[key].length > HIST) series[key].shift(); draw(key); }
+}
+
+function draw(key) {
+  const c = cards[key].cv, d = series[key], dpr = window.devicePixelRatio || 1;
+  c.width = c.clientWidth * dpr; c.height = 60 * dpr;
+  const g = c.getContext("2d"); g.clearRect(0, 0, c.width, c.height);
+  if (d.length < 2) return;
+  let lo = Math.min(...d), hi = Math.max(...d); if (hi - lo < 1e-6) { hi += 1; lo -= 1; }
+  g.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent"); g.lineWidth = 1.5 * dpr;
+  g.beginPath();
+  d.forEach((y, i) => { const px = i / (HIST - 1) * c.width, py = c.height - (y - lo) / (hi - lo) * (c.height - 4 * dpr) - 2 * dpr;
+    i ? g.lineTo(px, py) : g.moveTo(px, py); });
+  g.stroke();
+}
+
+function renderDtc(d) {
+  const ul = document.getElementById("dtc"); ul.textContent = "";
+  const add = (t, cls) => ul.append(el("li", cls, t));
+  add("Témoin moteur : " + (d.mil_on === true ? "ALLUMÉ" : d.mil_on === false ? "éteint" : "inconnu") + " — lu " + (d.read_at || ""), "meta");
+  for (const [k, label] of [["stored", "Confirmé"], ["pending", "En attente"], ["permanent", "Permanent"]]) {
+    if (d[k] == null) { add(label + " : non supporté", "meta"); continue; }
+    if (!d[k].length) add(label + " : aucun", "meta");
+    for (const x of d[k]) add(label + " : " + x.code + (x.ecu ? " (" + x.ecu + ")" : ""));
+  }
+}
+
+function applySnapshot(s) {
+  const vals = s.live.values || {};
+  for (const [k, m] of Object.entries(vals)) setValue(k, m.value, m.value_ts || m.ts, m.stale ? "périmée" : m.status, m.source);
+  applyStatus(s.status);
+}
+
+function applyStatus(st) {
+  const g = st.gateway_state;
+  pill("gw", "passerelle " + (st.gateway_id || "") + " : " + g, g === "online" ? "ok" : g === "lost" ? "warn" : "bad");
+  const e = st.elm;
+  pill("elm", e ? (e.version || "ELM327") + " · " + (e.protocol_name || e.protocol || "") + (e.voltage_v ? " · " + e.voltage_v + " V" : "") : "ELM327 ?",
+       st.obd_state === "connected" ? "ok" : "");
+}
+
+function onEvent(ev) {
+  if (ev.type === "hello") {
+    const cur = sel.value; sel.textContent = "";
+    for (const v of ev.vehicles) { const o = el("option", null, v.label || v.vehicle_id); o.value = v.vehicle_id; sel.append(o); }
+    if (cur) sel.value = cur; return;
+  }
+  if (ev.vehicle_id && vehicle && ev.vehicle_id !== vehicle) return;
+  if (ev.type === "snapshot") return applySnapshot(ev);
+  if (ev.type === "telemetry") { for (const m of ev.payload.measurements) setValue(m.key, m.value, m.ts, m.status, m.source); return; }
+  if (ev.type === "dtc") return renderDtc(ev.payload.dtc);
+  if (ev.type === "status") { const s = ev.payload.status;
+    pill("elm", s.state === "connected" ? (s.elm ? s.elm.version + " · " + (s.elm.protocol_name || s.elm.protocol) : "connecté") : "OBD " + s.state, s.state === "connected" ? "ok" : "warn"); return; }
+  if (ev.type === "gateway_state") { pill("gw", "passerelle " + ev.gateway_id + " : " + ev.state, ev.state === "online" ? "ok" : ev.state === "lost" ? "warn" : "bad"); return; }
+  if (ev.type === "health") { const h = ev.payload.health; if (h.state === "offline") pill("gw", "passerelle " + ev.gateway_id + " : offline", "bad"); }
+}
+
+function connect() {
+  if (!token) { document.getElementById("login").hidden = false; return; }
+  document.getElementById("login").hidden = true;
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  ws = new WebSocket(proto + "//" + location.host + "/ws/obd/live");
+  ws.onopen = () => { ws.send(JSON.stringify({ token, vehicle_id: vehicle })); pill("ws", "en direct", "ok"); retry = 1000; };
+  ws.onmessage = (m) => { const ev = JSON.parse(m.data);
+    if (ev.type === "error") { pill("ws", "jeton refusé", "bad"); token = null; return; }
+    onEvent(ev); };
+  ws.onclose = (e) => { pill("ws", "hors ligne", "bad");
+    if (e.code === 4401) { token = null; document.getElementById("login").hidden = false; return; }
+    setTimeout(connect, retry); retry = Math.min(retry * 2, 15000); };
+}
+
+setInterval(() => { // marque les valeurs périmées
+  const now = Date.now();
+  for (const c of Object.values(cards)) c.v.classList.toggle("stale", !c.v.dataset.ts || now - c.v.dataset.ts > STALE_MS);
+}, 1000);
+
+sel.onchange = () => { vehicle = sel.value; buildGrid(); if (ws) ws.close(); };
+document.getElementById("go").onclick = () => { token = document.getElementById("token").value.trim();
+  try { localStorage.setItem("obd_token", token); } catch (e) {} connect(); };
+document.getElementById("logout").onclick = () => { try { localStorage.removeItem("obd_token"); } catch (e) {} token = null; if (ws) ws.close(4000); document.getElementById("login").hidden = false; };
+buildGrid(); connect();
+</script>
+</body>
+</html>

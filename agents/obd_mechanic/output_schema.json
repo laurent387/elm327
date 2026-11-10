@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OvermindMechanicOutput",
+  "type": "object",
+  "required": ["agent", "vehicle_id", "status", "summary", "data_freshness", "confirmed", "hypotheses", "checks", "limits", "overall_confidence", "severity", "safety_advice"],
+  "properties": {
+    "agent": {"const": "OvermindMechanic"},
+    "vehicle_id": {"type": "string"},
+    "session_id": {"type": ["string", "null"]},
+    "status": {"enum": ["ok", "insufficient_data", "gateway_offline", "error"]},
+    "summary": {"type": "string"},
+    "data_freshness": {
+      "type": "object",
+      "required": ["connection", "newest_sample_age_s"],
+      "properties": {
+        "connection": {"enum": ["online", "lost", "offline", "unknown"]},
+        "newest_sample_age_s": {"type": ["number", "null"]}
+      }
+    },
+    "confirmed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["fact", "evidence"],
+        "properties": {
+          "fact": {"type": "string"},
+          "evidence": {"type": "array", "items": {"type": "string"}},
+          "dtc": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["cause", "system", "confidence", "supporting", "against"],
+        "properties": {
+          "cause": {"type": "string"},
+          "system": {"enum": ["admission", "suralimentation", "injection", "allumage", "combustion", "echappement", "refroidissement", "electrique", "capteur", "autre"]},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "supporting": {"type": "array", "items": {"type": "string"}},
+          "against": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["action", "purpose"],
+        "properties": {
+          "action": {"type": "string"},
+          "purpose": {"type": "string"},
+          "cost": {"enum": ["gratuit", "faible", "moyen", "eleve"]},
+          "requires_workshop": {"type": "boolean"}
+        }
+      }
+    },
+    "limits": {"type": "array", "items": {"type": "string"}},
+    "overall_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "severity": {"enum": ["info", "low", "medium", "high", "critical"]},
+    "safety_advice": {"type": ["string", "null"]},
+    "before_after": {
+      "type": ["object", "null"],
+      "properties": {
+        "before_session": {"type": "string"},
+        "after_session": {"type": "string"},
+        "deltas": {"type": "array", "items": {"type": "object"}}
+      }
+    }
+  }
+}

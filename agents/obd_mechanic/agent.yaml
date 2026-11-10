@@ -1,0 +1,46 @@
+id: obd_mechanic_agent
+name: OvermindMechanic
+version: 1.0
+
+preferred_model:
+  primary: mistral-ge75
+  fallback: qwen-hoverbot
+
+capabilities:
+  - read_vehicle_telemetry
+  - read_vehicle_dtc
+  - analyze_engine
+  - generate_diagnostic_report
+
+# Outils MCP du serveur overmind_obd (127.0.0.1:8796/mcp), tous en lecture seule.
+tools:
+  - obd_list_vehicles
+  - obd_get_connection_status
+  - obd_get_supported_pids
+  - obd_get_live_data
+  - obd_get_dtc
+  - obd_get_history
+  - obd_get_session
+  - obd_analyze_engine
+  - obd_generate_report
+
+permissions:
+  repository_read: true
+  repository_write: false
+  git_commit: false
+  git_push: false
+  production_deploy: false
+  shell_access: none
+  vehicle_write: false        # aucun effacement DTC, actionneur, codage, paramètre moteur
+
+requires_human_approval: []   # l'agent ne fait que lire et expliquer
+
+knowledge:
+  dtc: ../../overmind/overmind_obd/knowledge/dtc_generic_fr.yaml
+  vehicles_dir: ../../overmind/overmind_obd/knowledge/vehicles/
+  pid_catalog: ../../schemas/pid_catalog.json
+
+output_schema: output_schema.json
+
+timeout_seconds: 180
+max_iterations: 6

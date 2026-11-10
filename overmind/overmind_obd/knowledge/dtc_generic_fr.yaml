@@ -1,0 +1,684 @@
+# Codes défauts OBD2 génériques (SAE J2012) — descriptions FR, causes possibles et contrôles.
+# Les causes sont des HYPOTHÈSES classées par fréquence indicative : un code seul ne prouve
+# jamais qu'une pièce est défectueuse. Étendre librement ; surcharge par véhicule dans vehicles/.
+P0010:
+  causes:
+  - Électrovanne de déphaseur
+  - Câblage/connecteur
+  - Niveau ou qualité d'huile
+  checks:
+  - Contrôler le niveau d'huile
+  - Mesurer la résistance de l'électrovanne
+  - Inspecter le connecteur
+  description: Actionneur de calage d'arbre à cames admission banc 1 — circuit
+  severity: warning
+P0011:
+  causes:
+  - Huile inadaptée ou niveau bas
+  - Électrovanne de déphaseur
+  - Chaîne de distribution allongée, pignon de déphaseur usé
+  checks:
+  - Niveau/viscosité d'huile
+  - Comparer avec P0016/P0017
+  - Contrôle de calage de distribution
+  description: Calage arbre à cames admission banc 1 — avance excessive / performances
+  severity: warning
+P0016:
+  causes:
+  - Chaîne de distribution allongée (fréquent sur certains moteurs)
+  - Capteur PMH ou arbre à cames
+  - Déphaseur
+  checks:
+  - Lire les valeurs de déphasage constructeur
+  - Contrôle de distribution avant tout remplacement
+  description: Corrélation vilebrequin / arbre à cames banc 1 capteur A
+  severity: warning
+P0017:
+  causes:
+  - Distribution allongée
+  - Capteur arbre à cames échappement
+  checks:
+  - Comme P0016
+  description: Corrélation vilebrequin / arbre à cames banc 1 capteur B
+  severity: warning
+P0030:
+  causes:
+  - Élément chauffant de la sonde
+  - Fusible/relais
+  - Câblage
+  checks:
+  - Mesurer la résistance de chauffage
+  - Vérifier alimentation 12 V
+  description: Circuit de chauffage sonde O2 banc 1 capteur 1
+  severity: warning
+P0036:
+  causes:
+  - Élément chauffant
+  - Câblage
+  checks:
+  - Mesurer la résistance de chauffage
+  description: Circuit de chauffage sonde O2 banc 1 capteur 2
+  severity: warning
+P0087:
+  causes:
+  - Filtre à carburant colmaté
+  - Pompe basse pression
+  - Régulateur / capteur de pression rampe
+  - Pompe haute pression (diesel/IDE)
+  checks:
+  - Comparer pression mesurée et consigne si disponibles
+  - Contrôler la pression basse pression au manomètre
+  description: Pression rampe / système carburant trop basse
+  severity: critical
+P0088:
+  causes:
+  - Régulateur de pression
+  - Capteur de pression rampe
+  checks:
+  - Comparer consigne/mesure
+  - Contrôler le capteur
+  description: Pression rampe / système carburant trop haute
+  severity: critical
+P0093:
+  causes:
+  - Fuite externe
+  - Injecteur qui fuit (diesel)
+  - Régulateur
+  checks:
+  - Inspection visuelle immédiate — risque d'incendie
+  - Test de retour injecteurs (diesel)
+  description: Fuite détectée dans le système carburant (importante)
+  severity: critical
+P0100:
+  causes:
+  - Connecteur/câblage
+  - Débitmètre
+  checks:
+  - Contrôler alimentation et masse
+  - Comparer MAF au ralenti avec valeur attendue
+  description: Circuit débitmètre d'air (MAF) — dysfonctionnement
+  severity: warning
+P0101:
+  causes:
+  - Prise d'air après le débitmètre (durites, joint de collecteur, reniflard, servo-frein)
+  - Débitmètre encrassé ou défaillant
+  - Filtre à air colmaté
+  - Fuite d'admission après MAF
+  checks:
+  - Comparer MAF mesuré au débit théorique (régime × cylindrée × MAP)
+  - Rechercher une prise d'air (fumigène)
+  - Inspecter le filtre à air
+  description: Débitmètre d'air (MAF) — plage/performances
+  severity: warning
+P0102:
+  causes:
+  - Câblage coupé/court-circuit à la masse
+  - Débitmètre
+  - Fuite majeure avant papillon
+  checks:
+  - Contrôle électrique du capteur
+  description: Débitmètre d'air (MAF) — signal bas
+  severity: warning
+P0103:
+  causes:
+  - 'Court-circuit au + '
+  - Débitmètre
+  checks:
+  - Contrôle électrique du capteur
+  description: Débitmètre d'air (MAF) — signal haut
+  severity: warning
+P0106:
+  causes:
+  - Durite de dépression du capteur
+  - Capteur MAP
+  - Fuite d'admission
+  checks:
+  - Comparer MAP moteur arrêté contact mis à BARO (≈ égaux)
+  - Inspecter la durite du capteur
+  description: Capteur MAP / BARO — plage/performances
+  severity: warning
+P0107:
+  causes:
+  - Câblage
+  - Capteur
+  checks:
+  - Contrôle alimentation 5 V et masse
+  description: Capteur MAP — signal bas
+  severity: warning
+P0108:
+  causes:
+  - Câblage
+  - Capteur
+  - Durite débranchée
+  checks:
+  - Contrôle électrique
+  description: Capteur MAP — signal haut
+  severity: warning
+P0112:
+  causes:
+  - Court-circuit
+  - Capteur
+  checks:
+  - Comparer IAT moteur froid à la température ambiante
+  description: Température d'air d'admission — signal bas
+  severity: warning
+P0113:
+  causes:
+  - Circuit ouvert
+  - Capteur
+  checks:
+  - Comparer IAT moteur froid à l'ambiante
+  description: Température d'air d'admission — signal haut
+  severity: warning
+P0115:
+  causes:
+  - Capteur
+  - Câblage
+  checks:
+  - Comparer à la température réelle
+  description: Circuit température liquide de refroidissement
+  severity: warning
+P0116:
+  causes:
+  - Capteur
+  - Thermostat
+  checks:
+  - Courbe de montée en température
+  description: Température liquide de refroidissement — plage/performances
+  severity: warning
+P0117:
+  causes:
+  - Court-circuit
+  - Capteur
+  checks:
+  - Contrôle électrique
+  description: Température liquide — signal bas
+  severity: warning
+P0118:
+  causes:
+  - Circuit ouvert
+  - Capteur
+  checks:
+  - Contrôle électrique
+  description: Température liquide — signal haut
+  severity: warning
+P0121:
+  causes:
+  - Papillon encrassé
+  - Capteur de position
+  checks:
+  - Comparer papillon et pédale
+  description: Capteur position papillon A — plage/performances
+  severity: warning
+P0122:
+  causes:
+  - Câblage
+  - Capteur
+  checks:
+  - Contrôle électrique
+  description: Capteur position papillon A — signal bas
+  severity: warning
+P0123:
+  causes:
+  - Câblage
+  - Capteur
+  checks:
+  - Contrôle électrique
+  description: Capteur position papillon A — signal haut
+  severity: warning
+P0125:
+  causes:
+  - Thermostat bloqué ouvert
+  - Capteur de température
+  checks:
+  - Courbe de température sur 15–20 min de roulage
+  description: Température liquide insuffisante pour la régulation en boucle fermée
+  severity: warning
+P0128:
+  causes:
+  - Thermostat bloqué ouvert (cause la plus fréquente)
+  - Capteur de température
+  - Ventilateur toujours en marche
+  checks:
+  - Suivre la température après 15–20 min de roulage (doit atteindre ~85–105 °C selon moteur)
+  - Vérifier le fonctionnement du motoventilateur
+  description: Thermostat — température de liquide sous la température de régulation
+  severity: warning
+P0130:
+  causes:
+  - Sonde
+  - Câblage
+  - Fuite d'échappement
+  checks:
+  - Observer l'oscillation de la sonde (0,1–0,9 V) en boucle fermée
+  description: Sonde O2 banc 1 capteur 1 — circuit
+  severity: warning
+P0133:
+  causes:
+  - Sonde vieillissante
+  - Fuite d'échappement
+  - Contamination (huile, liquide de refroidissement)
+  checks:
+  - Mesurer la fréquence de basculement de la sonde
+  description: Sonde O2 banc 1 capteur 1 — réponse lente
+  severity: warning
+P0135:
+  causes:
+  - Élément chauffant
+  - Fusible
+  checks:
+  - Mesurer la résistance de chauffage
+  description: Chauffage sonde O2 banc 1 capteur 1 — circuit
+  severity: warning
+P0141:
+  causes:
+  - Élément chauffant
+  - Câblage
+  checks:
+  - Mesurer la résistance de chauffage
+  description: Chauffage sonde O2 banc 1 capteur 2 — circuit
+  severity: warning
+P0171:
+  causes:
+  - Prise d'air après le débitmètre (durites, joint de collecteur, reniflard, servo-frein)
+  - Débitmètre sous-évaluant le débit
+  - Pression carburant insuffisante (pompe, filtre, régulateur)
+  - Injecteurs encrassés
+  - Fuite d'échappement avant sonde amont
+  checks:
+  - 'Comparer corrections carburant au ralenti et en charge : pauvre surtout au ralenti → prise d''air ; pauvre
+    surtout en charge → alimentation carburant ou MAF'
+  - Test fumigène admission
+  - Mesurer la pression carburant
+  description: Mélange trop pauvre — banc 1
+  severity: warning
+P0172:
+  causes:
+  - Injecteur qui fuit
+  - Pression carburant excessive
+  - Débitmètre surévaluant
+  - Purge canister bloquée ouverte
+  - Filtre à air colmaté
+  checks:
+  - Comparer corrections au ralenti/en charge
+  - Contrôler la purge canister
+  - Mesurer la pression carburant
+  description: Mélange trop riche — banc 1
+  severity: warning
+P0174:
+  causes:
+  - Prise d'air après le débitmètre (durites, joint de collecteur, reniflard, servo-frein)
+  - Débitmètre
+  - Pression carburant
+  checks:
+  - Comme P0171 ; si P0171 et P0174 ensemble, cause commune (MAF, carburant, prise d'air centrale) plus probable
+  description: Mélange trop pauvre — banc 2
+  severity: warning
+P0175:
+  causes:
+  - Comme P0172
+  checks:
+  - Comme P0172
+  description: Mélange trop riche — banc 2
+  severity: warning
+P0191:
+  causes:
+  - Capteur
+  - Régulateur
+  - Pompe
+  checks:
+  - Comparer pression mesurée/consigne
+  description: Capteur pression rampe carburant — plage/performances
+  severity: warning
+P0201:
+  causes:
+  - Injecteur
+  - Câblage
+  checks:
+  - Mesurer la résistance de l'injecteur
+  description: Circuit injecteur cylindre 1
+  severity: warning
+P0234:
+  causes:
+  - Wastegate / régulation bloquée
+  - Électrovanne de régulation
+  - Capteur de suralimentation
+  checks:
+  - Comparer pression de suralimentation à la consigne si disponible
+  - Contrôler la commande de wastegate
+  description: Suralimentation excessive (overboost)
+  severity: critical
+P0299:
+  causes:
+  - Fuite entre compresseur et admission (durites, échangeur)
+  - Wastegate / vanne de décharge / bypass (compresseur volumétrique)
+  - Courroie ou embrayage de compresseur (volumétrique)
+  - Turbo usé
+  - Capteur
+  checks:
+  - Mesurer pression relative de suralimentation (MAP − BARO) pleine charge, uniquement si le capteur MAP est après
+    le compresseur
+  - Test d'étanchéité du circuit de suralimentation
+  - Contrôler la vanne bypass/wastegate
+  description: Suralimentation insuffisante (underboost)
+  severity: warning
+P0300:
+  causes:
+  - Bougies/bobines
+  - Mélange pauvre (prise d'air)
+  - Injecteurs
+  - Compression
+  checks:
+  - Lire les compteurs de ratés par cylindre (mode 06) si disponibles
+  - Inspecter bougies et bobines
+  - Test de compression si persistant
+  description: Ratés d'allumage aléatoires/multiples détectés
+  severity: critical
+P0301:
+  causes:
+  - Bougie
+  - Bobine
+  - Injecteur du cylindre
+  - Compression / soupape
+  checks:
+  - Permuter bobine/bougie avec un autre cylindre et voir si le défaut suit
+  - Test de compression
+  description: Raté d'allumage cylindre 1
+  severity: critical
+P0302:
+  causes:
+  - Bougie
+  - Bobine
+  - Injecteur du cylindre
+  - Compression / soupape
+  checks:
+  - Permuter bobine/bougie avec un autre cylindre et voir si le défaut suit
+  - Test de compression
+  description: Raté d'allumage cylindre 2
+  severity: critical
+P0303:
+  causes:
+  - Bougie
+  - Bobine
+  - Injecteur du cylindre
+  - Compression / soupape
+  checks:
+  - Permuter bobine/bougie avec un autre cylindre et voir si le défaut suit
+  - Test de compression
+  description: Raté d'allumage cylindre 3
+  severity: critical
+P0304:
+  causes:
+  - Bougie
+  - Bobine
+  - Injecteur du cylindre
+  - Compression / soupape
+  checks:
+  - Permuter bobine/bougie avec un autre cylindre et voir si le défaut suit
+  - Test de compression
+  description: Raté d'allumage cylindre 4
+  severity: critical
+P0305:
+  causes:
+  - Bougie
+  - Bobine
+  - Injecteur du cylindre
+  - Compression / soupape
+  checks:
+  - Permuter bobine/bougie avec un autre cylindre et voir si le défaut suit
+  - Test de compression
+  description: Raté d'allumage cylindre 5
+  severity: critical
+P0306:
+  causes:
+  - Bougie
+  - Bobine
+  - Injecteur du cylindre
+  - Compression / soupape
+  checks:
+  - Permuter bobine/bougie avec un autre cylindre et voir si le défaut suit
+  - Test de compression
+  description: Raté d'allumage cylindre 6
+  severity: critical
+P0307:
+  causes:
+  - Bougie
+  - Bobine
+  - Injecteur du cylindre
+  - Compression / soupape
+  checks:
+  - Permuter bobine/bougie avec un autre cylindre et voir si le défaut suit
+  - Test de compression
+  description: Raté d'allumage cylindre 7
+  severity: critical
+P0308:
+  causes:
+  - Bougie
+  - Bobine
+  - Injecteur du cylindre
+  - Compression / soupape
+  checks:
+  - Permuter bobine/bougie avec un autre cylindre et voir si le défaut suit
+  - Test de compression
+  description: Raté d'allumage cylindre 8
+  severity: critical
+P0325:
+  causes:
+  - Capteur
+  - Câblage
+  - Couple de serrage
+  checks:
+  - Contrôler connecteur et couple de serrage
+  description: Capteur de cliquetis 1 banc 1 — circuit
+  severity: warning
+P0335:
+  causes:
+  - Capteur PMH
+  - Câblage
+  - Cible
+  checks:
+  - Contrôle électrique, entrefer
+  description: Capteur position vilebrequin A — circuit
+  severity: critical
+P0340:
+  causes:
+  - Capteur
+  - Câblage
+  checks:
+  - Contrôle électrique
+  description: Capteur position arbre à cames A — circuit
+  severity: warning
+P0400:
+  causes:
+  - Vanne EGR encrassée
+  - Conduits EGR obstrués
+  checks:
+  - Comparer EGR commandé et erreur EGR (PID 012C/012D) si disponibles
+  description: Recirculation des gaz d'échappement (EGR) — débit
+  severity: warning
+P0401:
+  causes:
+  - Conduits EGR calaminés
+  - Vanne EGR
+  checks:
+  - Inspecter et nettoyer les conduits
+  - Observer l'erreur EGR
+  description: EGR — débit insuffisant
+  severity: warning
+P0402:
+  causes:
+  - Vanne EGR bloquée ouverte
+  checks:
+  - Contrôler la fermeture de la vanne
+  description: EGR — débit excessif
+  severity: warning
+P0420:
+  causes:
+  - Catalyseur dégradé
+  - Sonde aval défaillante
+  - Fuite d'échappement
+  - Ratés d'allumage antérieurs
+  - Mélange déréglé
+  checks:
+  - 'Comparer sondes amont/aval : l''aval doit rester stable (~0,6–0,7 V)'
+  - Rechercher fuite d'échappement
+  - Corriger d'abord tout défaut de mélange ou de ratés
+  description: Efficacité du catalyseur sous le seuil — banc 1
+  severity: warning
+P0430:
+  causes:
+  - Comme P0420
+  checks:
+  - Comme P0420
+  description: Efficacité du catalyseur sous le seuil — banc 2
+  severity: warning
+P0440:
+  causes:
+  - Bouchon de réservoir
+  - Durites EVAP
+  - Électrovanne de purge
+  checks:
+  - Contrôler le bouchon de réservoir
+  - Test fumigène EVAP
+  description: Système EVAP (canister) — dysfonctionnement
+  severity: info
+P0442:
+  causes:
+  - Bouchon de réservoir
+  - Durite fissurée
+  checks:
+  - Test fumigène EVAP
+  description: Système EVAP — petite fuite
+  severity: info
+P0455:
+  causes:
+  - Bouchon absent/mal serré
+  - Durite débranchée
+  checks:
+  - Contrôler le bouchon
+  description: Système EVAP — grosse fuite
+  severity: info
+P0500:
+  causes:
+  - Capteur
+  - Câblage
+  - Défaut ABS associé
+  checks:
+  - Comparer vitesse OBD et compteur
+  description: Capteur de vitesse véhicule
+  severity: warning
+P0505:
+  causes:
+  - Papillon motorisé encrassé
+  - Prise d'air
+  checks:
+  - Nettoyer le boîtier papillon
+  - Rechercher une prise d'air
+  description: Régulation du ralenti — dysfonctionnement
+  severity: warning
+P0506:
+  causes:
+  - Papillon encrassé
+  - Charge alternateur
+  checks:
+  - Nettoyage papillon
+  description: Régime de ralenti plus bas que prévu
+  severity: warning
+P0507:
+  causes:
+  - Prise d'air
+  - Papillon
+  checks:
+  - Test fumigène
+  description: Régime de ralenti plus haut que prévu
+  severity: warning
+P0562:
+  causes:
+  - Batterie
+  - Alternateur / régulateur
+  - Masse
+  checks:
+  - Mesurer tension moteur tournant (≈ 13,5–14,7 V)
+  description: Tension système basse
+  severity: warning
+P0563:
+  causes:
+  - Régulateur d'alternateur
+  checks:
+  - Mesurer tension moteur tournant
+  description: Tension système haute
+  severity: warning
+P0600:
+  causes:
+  - Calculateur
+  - Alimentation
+  checks:
+  - Contrôler alimentations et masses du calculateur
+  description: Liaison série / communication calculateur
+  severity: warning
+P0606:
+  causes:
+  - Calculateur
+  - Alimentation instable
+  checks:
+  - Vérifier tension/masses avant tout diagnostic calculateur
+  description: Processeur du calculateur moteur
+  severity: critical
+P0700:
+  causes:
+  - Défaut mémorisé dans le calculateur de boîte
+  checks:
+  - Lire les codes du calculateur de boîte (outil constructeur)
+  description: Système de commande de boîte de vitesses — défaut présent
+  severity: warning
+P2002:
+  causes:
+  - FAP percé/fissuré
+  - Capteur de pression différentielle
+  checks:
+  - Comparer pression différentielle à vide et en charge
+  description: Efficacité du filtre à particules sous le seuil — banc 1
+  severity: warning
+P2187:
+  causes:
+  - Prise d'air après le débitmètre (durites, joint de collecteur, reniflard, servo-frein)
+  - Recyclage des vapeurs d'huile (reniflard)
+  checks:
+  - Test fumigène
+  - Contrôler le reniflard / membrane PCV
+  description: Mélange trop pauvre au ralenti — banc 1
+  severity: warning
+P2188:
+  causes:
+  - Purge canister
+  - Injecteur qui fuit
+  checks:
+  - Contrôler la purge canister
+  description: Mélange trop riche au ralenti — banc 1
+  severity: warning
+P2463:
+  causes:
+  - Trajets courts répétés
+  - Régénérations interrompues
+  - Injecteur / EGR (production de suies)
+  checks:
+  - Lire la pression différentielle FAP
+  - Trajet autoroutier pour régénération (si autorisé)
+  description: Accumulation de suies dans le FAP
+  severity: warning
+U0100:
+  causes:
+  - Bus CAN
+  - Alimentation calculateur
+  checks:
+  - Contrôler alimentation/masse et bus CAN
+  description: Perte de communication avec le calculateur moteur
+  severity: critical
+U0101:
+  causes:
+  - Bus CAN
+  - Calculateur de boîte
+  checks:
+  - Contrôler le bus CAN
+  description: Perte de communication avec le calculateur de boîte
+  severity: warning
