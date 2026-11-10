@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.overmind.obdgateway.OvermindApp
 import com.overmind.obdgateway.buffer.SessionRecord
 import com.overmind.obdgateway.gateway.GatewayUiState
-import com.overmind.obdgateway.gateway.ObdState
 import com.overmind.obdgateway.net.UplinkState
 import com.overmind.obdgateway.service.GatewayService
 import com.overmind.obdgateway.settings.GatewaySettings
@@ -35,11 +34,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val sessions = _sessions.asStateFlow()
 
     val sessionActive: Boolean
-        get() = gateway.value.obdState !in setOf(ObdState.IDLE, ObdState.STOPPED)
+        get() = gateway.value.sessionActive
 
-    /** Véhicule en mouvement d'après la dernière vitesse OBD valide. */
+    /** Véhicule en mouvement d'après une vitesse OBD récente de la session en cours. */
     val vehicleMoving: Boolean
-        get() = gateway.value.live["speed_kmh"]?.let { it.status == "ok" && (it.value ?: 0.0) > 0.0 } == true
+        get() = gateway.value.vehicleMoving(System.currentTimeMillis())
 
     @SuppressLint("MissingPermission")
     fun refreshDevices(hasPermission: Boolean) {

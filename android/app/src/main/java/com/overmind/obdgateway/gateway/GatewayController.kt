@@ -64,7 +64,21 @@ data class GatewayUiState(
     val lastError: String? = null,
     val cycleMs: Long? = null,
     val log: List<String> = emptyList(),
-)
+) {
+    val sessionActive: Boolean get() = obdState != ObdState.IDLE && obdState != ObdState.STOPPED
+
+    /**
+     * Véhicule en mouvement : dernière vitesse OBD valide > 0, lue pendant une session active
+     * et il y a moins de [maxAgeMs]. Une vitesse figée d'une session arrêtée ne verrouille rien.
+     */
+    fun vehicleMoving(nowMs: Long, maxAgeMs: Long = MOVING_MAX_AGE_MS): Boolean {
+        if (!sessionActive) return false
+        val v = live["speed_kmh"] ?: return false
+        return v.status == "ok" && (v.value ?: 0.0) > 0.0 && nowMs - v.timestampMs in 0..maxAgeMs
+    }
+
+    companion object { const val MOVING_MAX_AGE_MS = 10_000L }
+}
 
 /**
  * Cœur de la passerelle : session ELM327 → acquisition → messages → outbox.
