@@ -1,0 +1,43 @@
+id: copilot_agent
+name: OvermindCopilot          # nom affiché/prononcé configurable (OVERMIND_COPILOT_NAME, ex. « Kitt »)
+version: 1.0
+
+preferred_model:
+  primary: mistral-ge75        # orchestrator/model_router.py
+  fallback: qwen-hoverbot
+
+capabilities:
+  - converse_voice
+  - read_vehicle_telemetry
+  - read_vehicle_dtc
+  - delegate_diagnostic        # → obd_mechanic_agent
+  - request_head_unit_action   # média, navigation, appel (exécutés par l'autoradio)
+
+# Outils serveur, tous en lecture seule (overmind_obd.queries.ObdQueries).
+tools:
+  - vehicle_live
+  - vehicle_dtc
+  - vehicle_history
+  - vehicle_diagnostic
+
+# Actions renvoyées à l'autoradio (liste blanche, schemas/COPILOT_PROTOCOL.md).
+client_actions:
+  - media
+  - navigate
+  - call                       # seulement après confirmation vocale
+
+permissions:
+  repository_read: false
+  repository_write: false
+  git_commit: false
+  git_push: false
+  production_deploy: false
+  shell_access: none
+  vehicle_write: false         # aucun effacement DTC, actionneur, codage, paramètre moteur
+
+requires_human_approval: []
+
+output_schema: output_schema.json
+
+timeout_seconds: 30
+max_iterations: 3

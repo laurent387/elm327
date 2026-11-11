@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OvermindCopilotOutput",
+  "type": "object",
+  "required": ["intent", "speech"],
+  "properties": {
+    "intent": {
+      "enum": ["chat", "vehicle", "diagnostic", "media", "navigate", "call", "location", "refuse", "unknown"]
+    },
+    "speech": {"type": "string", "maxLength": 600},
+    "tool": {
+      "type": ["string", "null"],
+      "enum": ["vehicle_live", "vehicle_dtc", "vehicle_history", "vehicle_diagnostic", null]
+    },
+    "tool_args": {"type": "object"},
+    "action": {
+      "type": ["object", "null"],
+      "properties": {
+        "type": {"enum": ["media", "navigate", "call"]},
+        "command": {"enum": ["play", "pause", "toggle", "next", "previous", "volume_up", "volume_down"]},
+        "destination": {"type": "string"},
+        "contact": {"type": "string"}
+      },
+      "required": ["type"]
+    }
+  }
+}

@@ -1,0 +1,18 @@
+[Unit]
+Description=Overmind Copilot « Kitt » — assistant vocal de l'autoradio (WebSocket :8097 ; TLS sur le réseau, redirection Freebox 38097)
+After=network-online.target overmind-obd-api.service ollama.service
+Wants=overmind-obd-api.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/elm327/overmind
+EnvironmentFile=%h/.config/overmind/obd.env
+ExecStart=%h/elm327/overmind/.venv/bin/python -m overmind_copilot.server
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+# Vosk (petit modèle) + Piper : ~0,6 Go ; le grand modèle Vosk en demande ~4.
+MemoryHigh=2G
+
+[Install]
+WantedBy=default.target

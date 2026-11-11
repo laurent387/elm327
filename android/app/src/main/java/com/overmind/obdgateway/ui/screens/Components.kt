@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.overmind.obdgateway.ui.LocalDisplayProfile
 import com.overmind.obdgateway.gateway.LiveValue
 import com.overmind.obdgateway.ui.theme.OvermindColors
 import java.text.DateFormat
@@ -77,20 +78,22 @@ fun formatValue(v: Double?, unit: String): String {
 fun BigValue(label: String, value: LiveValue?, unit: String, modifier: Modifier = Modifier, accent: Color = OvermindColors.Accent) {
     val status = value?.status
     val color = when (status) { "ok" -> accent; "stale" -> OvermindColors.Muted; else -> OvermindColors.Muted }
+    val p = LocalDisplayProfile.current
     Card(
         modifier = modifier.padding(4.dp),
         colors = CardDefaults.cardColors(containerColor = OvermindColors.SurfaceHi),
         shape = RoundedCornerShape(14.dp),
     ) {
-        Column(Modifier.padding(12.dp).fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-            Text(label, color = OvermindColors.Muted, fontSize = 13.sp)
+        Column(Modifier.padding(p.dp(12f)).fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+            Text(label, color = OvermindColors.Muted, fontSize = p.sp(14f), maxLines = 1)
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     if (status == "unsupported") "n/d" else formatValue(value?.value, unit),
-                    color = color, fontSize = 40.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace,
+                    color = color, fontSize = p.sp(44f, min = 26f), fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace, maxLines = 1,
                 )
                 Spacer(Modifier.width(6.dp))
-                Text(unit, color = OvermindColors.Muted, fontSize = 15.sp, modifier = Modifier.padding(bottom = 7.dp))
+                Text(unit, color = OvermindColors.Muted, fontSize = p.sp(16f), modifier = Modifier.padding(bottom = 7.dp))
             }
             val hint = when (status) {
                 "unsupported" -> "non exposé par le véhicule"
@@ -99,7 +102,7 @@ fun BigValue(label: String, value: LiveValue?, unit: String, modifier: Modifier 
                 "pending", null -> "en attente"
                 else -> null
             }
-            if (hint != null) Text(hint, color = OvermindColors.Muted, fontSize = 11.sp)
+            if (hint != null) Text(hint, color = OvermindColors.Muted, fontSize = p.sp(12f), maxLines = 1)
         }
     }
 }

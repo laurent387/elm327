@@ -3,3 +3,9 @@
 __pycache__/
 .venv/
 .pytest_cache/
+
+# Modèle Vosk de l autoradio (tools/headunit_assets.sh), trop gros pour git
+android/app/src/headunit/assets/model-fr/
+android/app/src/headunit/assets/overmind_ca.pem
+android/app/src/headunit/assets/obd_adapter.txt
+dist/

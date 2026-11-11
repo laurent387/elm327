@@ -1,5 +1,5 @@
 [Unit]
-Description=Overmind OBD — serveur MCP lecture seule (:8796)
+Description=Overmind OBD — serveur MCP lecture seule (:8799 sur le GE75)
 After=network-online.target
 
 [Service]

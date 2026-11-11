@@ -21,6 +21,8 @@ class FakeElm327(
     var permanentSupported: Boolean = true,
     var vin: String = "WDB1714561F123456",
     var multiPidSupported: Boolean = true,
+    /** Code NRC renvoyé au mode 04 (ex. 0x22 = conditions non remplies), null = effacement accepté. */
+    var clearRefusal: Int? = null,
 ) {
     var echo = true
     var headers = false
@@ -117,6 +119,8 @@ class FakeElm327(
             "01" -> mode01(cmd)
             "03" -> dtcResponse(0x43, stored)
             "07" -> dtcResponse(0x47, pending)
+            "04" -> clearRefusal?.let { frame(intArrayOf(0x7F, 0x04, it)) }
+                ?: run { stored = emptyList(); pending = emptyList(); frame(intArrayOf(0x44)) }
             "0A" -> if (permanentSupported) dtcResponse(0x4A, emptyList()) else listOf("NO DATA")
             "09" -> if (cmd == "0902") frame(intArrayOf(0x49, 0x02, 0x01) + vin.map { it.code }.toIntArray()) else listOf("NO DATA")
             else -> listOf("?")

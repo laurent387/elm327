@@ -89,6 +89,11 @@ class GatewayService : LifecycleService() {
         sessionJob = lifecycleScope.launch {
             try {
                 app.controller.runSession(s) { transportFor(s) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Jamais de plantage de l'appli (sur l'autoradio, Kitt tourne dans le même processus).
+                app.controller.log("Session OBD arrêtée : ${e.message ?: e.javaClass.simpleName}")
             } finally {
                 releaseWakeLock()
             }
@@ -112,7 +117,7 @@ class GatewayService : LifecycleService() {
         AdapterTransport.TCP -> TcpTransport(s.tcpHost, s.tcpPort)
         AdapterTransport.BLUETOOTH -> {
             val adapter = getSystemService(BluetoothManager::class.java)?.adapter
-                ?: throw IllegalStateException("Bluetooth indisponible sur cet appareil")
+                ?: throw java.io.IOException("Bluetooth Android indisponible sur cet appareil")
             BluetoothSppTransport(adapter, s.btAddress)
         }
     }

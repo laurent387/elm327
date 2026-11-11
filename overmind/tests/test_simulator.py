@@ -45,7 +45,7 @@ def test_raw_elm_dialog(sim_port):
     assert first.startswith("SEARCHING...\r41 00 ")
     assert raw(s, "ATDPN").startswith("A6")
     assert raw(s, "0199") == "NO DATA\r\r>"
-    assert raw(s, "04") == "?\r\r>"                  # effacement refusé
+    assert raw(s, "04") == "7F 04 22\r\r>"           # effacement refusé : moteur tournant
     assert raw(s, "0A") == "NO DATA\r\r>"
     assert raw(s, "ATS0").startswith("OK")
     mf = raw(s, "03")                                   # 3 codes -> multi-trame ISO-TP, ATH0
@@ -68,3 +68,13 @@ def test_client_parses_everything(sim_port):
     assert 0 <= decode(load_catalog()["010C"]["formula"], rpm[2:]) < 8000
     with pytest.raises(ValueError):
         e.cmd("04")                                     # le client refuse aussi le mode 04
+
+
+def test_clear_dtc_only_engine_off():
+    """Mode 04 : comme un calculateur, accepté seulement contact mis moteur coupé, puis codes vidés."""
+    args = elm327_sim.parse_args(["--dtc", "P0171", "--pending", "P0300", "--engine-off", "--no-permanent"])
+    state = elm327_sim.ElmState(args)
+    assert state.engine.rpm == 0
+    assert any("44" in line for line in state.obd("04"))
+    assert args.dtc == [] and args.pending == []
+    assert state.obd("03") == ["43 00"]

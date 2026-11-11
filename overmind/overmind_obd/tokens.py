@@ -20,7 +20,7 @@ import os
 import secrets
 from pathlib import Path
 
-SCOPES = {"api", "mcp"}
+SCOPES = {"api", "mcp", "copilot", "remote"}
 
 
 def sha256_hex(token: str) -> str:

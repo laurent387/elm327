@@ -100,6 +100,15 @@ class ObdDecodingTest {
             assertThrows(bad, ObdCommandGuard.ForbiddenCommandException::class.java) { ObdCommandGuard.check(bad) }
     }
 
+    @Test fun `effacement des defauts seulement par son chemin dedie`() {
+        assertEquals("04", ObdCommandGuard.checkClearDtc("04"))
+        assertEquals("04", ObdCommandGuard.checkClearDtc(" 04 "))
+        for (bad in listOf("03", "0400", "08", "14FFFFFF", "ATZ", "", "4"))
+            assertThrows(bad, ObdCommandGuard.ForbiddenCommandException::class.java) { ObdCommandGuard.checkClearDtc(bad) }
+        // le chemin normal (send) refuse toujours 04
+        assertThrows(ObdCommandGuard.ForbiddenCommandException::class.java) { ObdCommandGuard.check("04") }
+    }
+
     @Test fun `nettoyage reponse ELM`() {
         val lines = ElmConnection.clean("0100", "0100\r\nSEARCHING...\r\n7E8 06 41 00 BE 3F A8 13\r\n\r\n")
         assertEquals(listOf("7E8 06 41 00 BE 3F A8 13"), lines)

@@ -64,6 +64,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun stop() = GatewayService.stop(app)
     fun sync() = GatewayService.sync(app)
     fun readDtc() = app.controller.requestDtcRead()
+    fun clearDtc() = app.controller.requestDtcClear()
 
     fun refreshSessions() {
         viewModelScope.launch(Dispatchers.IO) { _sessions.value = app.sessions.recent(30) }

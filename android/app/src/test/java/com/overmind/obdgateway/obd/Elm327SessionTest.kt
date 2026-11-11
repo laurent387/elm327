@@ -96,4 +96,21 @@ class Elm327SessionTest {
         val s = session(sim).apply { initialize() }
         assertThrows(NoVehicleException::class.java) { s.detectProtocol() }
     }
+
+    @Test fun `effacement des defauts puis relecture`() {
+        val sim = FakeElm327(stored = listOf(0x0171), pending = listOf(0x0300))
+        val s = session(sim).apply { initialize(); detectProtocol(); discoverSupportedPids() }
+        assertEquals(listOf("P0171"), s.readDtcs().stored.map { it.code })
+        val after = s.clearDtcs()
+        assertTrue(after.stored.isEmpty() && after.pending.isEmpty())
+        assertTrue("04" in sim.received)
+    }
+
+    @Test fun `effacement refuse par le calculateur`() {
+        val sim = FakeElm327(stored = listOf(0x0171), clearRefusal = 0x22)
+        val s = session(sim).apply { initialize(); detectProtocol(); discoverSupportedPids() }
+        val e = assertThrows(java.io.IOException::class.java) { s.clearDtcs() }
+        assertTrue(e.message!!.contains("22"))
+        assertEquals(listOf("P0171"), s.readDtcs().stored.map { it.code })
+    }
 }

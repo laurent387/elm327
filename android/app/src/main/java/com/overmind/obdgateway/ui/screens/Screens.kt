@@ -1,5 +1,11 @@
 package com.overmind.obdgateway.ui.screens
 
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.clickable
@@ -31,17 +37,20 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.overmind.obdgateway.ui.LocalDisplayProfile
 import com.overmind.obdgateway.gateway.ObdState
 import com.overmind.obdgateway.obd.dtc.Dtc
 import com.overmind.obdgateway.obd.dtc.DtcDescriptions
 import com.overmind.obdgateway.obd.pid.PidCatalog
 import com.overmind.obdgateway.settings.AdapterTransport
+import com.overmind.obdgateway.ui.BtDevice
 import com.overmind.obdgateway.ui.MainViewModel
 import com.overmind.obdgateway.ui.theme.OvermindColors
 
 @Composable
 private fun Screen(content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) { content() }
+    val p = LocalDisplayProfile.current
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(p.dp(12f))) { content() }
 }
 
 @Composable
@@ -69,39 +78,51 @@ fun DashboardScreen(vm: MainViewModel) {
     val g by vm.gateway.collectAsState()
     val up by vm.uplink.collectAsState()
     val s by vm.settings.collectAsState()
+    val p = LocalDisplayProfile.current
     Screen {
-        Section("État") {
-            StatusDot(
-                when (g.obdState) { ObdState.RUNNING -> true; ObdState.IDLE, ObdState.STOPPED -> false; else -> null },
-                "OBD : ${g.obdState.label}",
-                listOfNotNull(g.adapter, g.elm?.protocol?.label, g.lastError?.takeIf { g.obdState != ObdState.RUNNING }).joinToString(" · ").ifEmpty { null },
-            )
-            StatusDot(
-                up.connected, if (up.connected) "Overmind connecté" else "Overmind hors ligne",
-                "${s.brokerHost}:${s.brokerPort}${if (s.effectiveTls) " (TLS)" else ""} · ${up.pending} message(s) en attente" +
-                    (up.lastError?.let { " · $it" } ?: ""),
-            )
-            StatusDot(true, "Véhicule : ${s.vehicleId}", g.vin?.let { "VIN $it" })
+        val etat: @Composable (Modifier) -> Unit = { m ->
+            Column(m) {
+            Section("État") {
+                StatusDot(
+                    when (g.obdState) { ObdState.RUNNING -> true; ObdState.IDLE, ObdState.STOPPED -> false; else -> null },
+                    "OBD : ${g.obdState.label}",
+                    listOfNotNull(g.adapter, g.elm?.protocol?.label, g.lastError?.takeIf { g.obdState != ObdState.RUNNING }).joinToString(" · ").ifEmpty { null },
+                )
+                StatusDot(
+                    up.connected, if (up.connected) "Overmind connecté" else "Overmind hors ligne",
+                    "${s.brokerHost}:${s.brokerPort}${if (s.effectiveTls) " (TLS)" else ""} · ${up.pending} message(s) en attente" +
+                        (up.lastError?.let { " · $it" } ?: ""),
+                )
+                StatusDot(true, "Véhicule : ${s.vehicleId}", g.vin?.let { "VIN $it" })
+            }
+            }
         }
-        Row(Modifier.fillMaxWidth()) {
-            BigValue("Régime", g.live["rpm"], "rpm", Modifier.weight(1f))
-            BigValue("Vitesse", g.live["speed_kmh"], "km/h", Modifier.weight(1f))
-        }
-        Row(Modifier.fillMaxWidth()) {
-            BigValue("MAP absolue", g.live["map_kpa_absolute"], "kPa", Modifier.weight(1f))
-            BigValue("Charge", g.live["engine_load_pct"], "%", Modifier.weight(1f))
-        }
-        Row(Modifier.fillMaxWidth()) {
-            BigValue("Liquide refr.", g.live["coolant_temp_c"], "°C", Modifier.weight(1f), OvermindColors.Amber)
-            BigValue("Surpression*", g.live[PidCatalog.BOOST_KEY], "kPa", Modifier.weight(1f), OvermindColors.Amber)
+        if (p.landscape) {
+            // Paysage (autoradio) : état et bouton de session côte à côte, tout reste visible sans défiler.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                etat(Modifier.weight(2f))
+                Column(Modifier.weight(1f).padding(start = 8.dp)) { SessionButton(vm) }
+            }
+        } else etat(Modifier.fillMaxWidth())
+        // Six grandeurs : 3 colonnes si la largeur le permet (autoradio, paysage), sinon 2.
+        val tiles: List<@Composable (Modifier) -> Unit> = listOf(
+            { m -> BigValue("Régime", g.live["rpm"], "rpm", m) },
+            { m -> BigValue("Vitesse", g.live["speed_kmh"], "km/h", m) },
+            { m -> BigValue("Liquide refr.", g.live["coolant_temp_c"], "°C", m, OvermindColors.Amber) },
+            { m -> BigValue("MAP absolue", g.live["map_kpa_absolute"], "kPa", m) },
+            { m -> BigValue("Charge", g.live["engine_load_pct"], "%", m) },
+            { m -> BigValue("Surpression*", g.live[PidCatalog.BOOST_KEY], "kPa", m, OvermindColors.Amber) },
+        )
+        val cols = if (p.wide || (p.landscape && p.widthDp >= 560)) 3 else 2
+        tiles.chunked(cols).forEach { row ->
+            Row(Modifier.fillMaxWidth()) { row.forEach { it(Modifier.weight(1f)) } }
         }
         Text(
             "* MAP − BARO ; n'est une pression de suralimentation que si le capteur MAP est en aval du compresseur " +
                 "(emplacement déclaré : ${s.mapSensorLocation}).",
             color = OvermindColors.Muted, fontSize = 11.sp, modifier = Modifier.padding(4.dp),
         )
-        Spacer(Modifier.height(8.dp))
-        SessionButton(vm)
+        if (!p.landscape) { Spacer(Modifier.height(8.dp)); SessionButton(vm) }
         g.cycleMs?.let { Text("Cycle d'acquisition : $it ms", color = OvermindColors.Muted, fontSize = 12.sp, modifier = Modifier.padding(4.dp)) }
     }
 }
@@ -140,6 +161,20 @@ fun ConnectionScreen(vm: MainViewModel, hasBtPermission: Boolean, requestPermiss
                         }
                     }
                 }
+                // Autoradios dont le Bluetooth n'appaire pas l'ELM327 : connexion directe par adresse
+                // (tentative RFCOMM « insecure », sans appairage préalable).
+                var mac by remember { mutableStateOf("") }
+                val macOk = MAC_RE.matches(mac.trim())
+                Text("Ou adresse de l'adaptateur (ex. 86:41:DF:71:A8:26, visible dans les détails Bluetooth du téléphone) :",
+                    color = OvermindColors.Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(mac, { mac = it.uppercase().take(17) }, singleLine = true, modifier = Modifier.weight(1f),
+                        placeholder = { Text("AA:BB:CC:DD:EE:FF") }, isError = mac.isNotEmpty() && !macOk)
+                    Button(onClick = { vm.selectDevice(BtDevice("ELM327 (adresse saisie)", mac.trim(), true)); mac = "" },
+                        enabled = macOk && !vm.sessionActive) { Text("Utiliser") }
+                }
+                if (s.btAddress.isNotEmpty() && devices.none { it.address == s.btAddress })
+                    Text("Adaptateur choisi : ${s.btName} ${s.btAddress}", color = OvermindColors.Accent, fontSize = 13.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { vm.refreshDevices(hasBtPermission) }) { Text("Actualiser") }
                     OutlinedButton(onClick = { ctx.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }) { Text("Appairer (PIN 1234 / 0000)") }
@@ -208,11 +243,39 @@ fun DtcScreen(vm: MainViewModel) {
             Text(if (g.dtcReading) "Lecture en cours…" else "Lire les codes défauts")
         }
         if (!running) Text("Disponible pendant une session active.", color = OvermindColors.Muted, fontSize = 12.sp)
+        val d = g.lastDtc
+        var confirm by remember { mutableStateOf(false) }
+        val codes = d?.let { (it.stored + it.pending).map { c -> c.code }.distinct() }.orEmpty()
+        OutlinedButton(
+            onClick = { confirm = true },
+            enabled = running && !g.dtcReading && !g.dtcClearing && d != null && (codes.isNotEmpty() || d.milOn == true),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        ) { Text(if (g.dtcClearing) "Effacement en cours…" else "Effacer les codes défauts") }
+        g.dtcClearResult?.let { r ->
+            Text(r, color = if (r.startsWith("Défauts effacés")) OvermindColors.Ok else OvermindColors.Amber,
+                fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+        }
         Text(
-            "Lecture seule : l'effacement des défauts est volontairement désactivé. L'interprétation est faite par l'agent Overmind Mechanic.",
+            "Effacement uniquement depuis cet écran, après confirmation, véhicule à l'arrêt et moteur coupé (contact mis). " +
+                "Jamais à distance. L'interprétation est faite par l'agent Overmind Mechanic.",
             color = OvermindColors.Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp),
         )
-        val d = g.lastDtc
+        if (confirm) AlertDialog(
+            onDismissRequest = { confirm = false },
+            title = { Text("Effacer les codes défauts ?") },
+            text = {
+                Text(
+                    (if (codes.isNotEmpty()) "Codes : ${codes.joinToString()}\n\n" else "") +
+                        "• Moteur coupé, contact mis, véhicule à l'arrêt.\n" +
+                        "• Le voyant s'éteint, mais la cause n'est pas réparée : si elle persiste, le code reviendra.\n" +
+                        "• L'image figée du défaut (freeze frame) et les tests de préparation sont remis à zéro " +
+                        "(gênant juste avant un contrôle technique).\n" +
+                        "• Les codes permanents (mode 0A) ne s'effacent pas : le calculateur les retire lui-même.",
+                )
+            },
+            confirmButton = { Button(onClick = { confirm = false; vm.clearDtc() }) { Text("Effacer") } },
+            dismissButton = { TextButton(onClick = { confirm = false }) { Text("Annuler") } },
+        )
         if (d == null) {
             Text("Aucune lecture pour l'instant.", color = OvermindColors.Muted)
         } else {
@@ -267,3 +330,5 @@ fun HistoryScreen(vm: MainViewModel) {
         }
     }
 }
+
+private val MAC_RE = Regex("^([0-9A-F]{2}:){5}[0-9A-F]{2}$")

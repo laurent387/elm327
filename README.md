@@ -38,9 +38,23 @@ jeton ni adresse.
 | [`schemas/`](schemas/) | Contrat des messages : [`PROTOCOL.md`](schemas/PROTOCOL.md), schéma JSON, catalogue PID |
 | [`overmind/`](overmind/) | Service Overmind `overmind_obd` : ingestion MQTT, stockage, API, analyse, MCP ([README](overmind/README.md)) |
 | [`agents/obd_mechanic/`](agents/obd_mechanic/) | Skill **Overmind Mechanic** (format des agents HoverMind) |
+| [`agents/copilot/`](agents/copilot/) | Agent **copilote vocal** de l'autoradio (« Kitt ») |
 | [`tools/`](tools/) | Simulateur ELM327, passerelle factice, broker de dev, test bout-en-bout |
 | [`deploy/`](deploy/) | Mosquitto (conf, ACL, comptes), unités systemd |
-| [`docs/`](docs/) | [Guide réseau Freebox / Tailscale](docs/RESEAU_FREEBOX_TAILSCALE.md) |
+| [`docs/`](docs/) | [Guide réseau Freebox / Tailscale](docs/RESEAU_FREEBOX_TAILSCALE.md), [Autoradio et copilote « Kitt »](docs/AUTORADIO.md) |
+
+## Variante autoradio : copilote vocal « Kitt »
+
+`./gradlew assembleHeadunitDebug` produit **Overmind Kitt** (`com.overmind.copilot`) : la même
+passerelle OBD, plus un assistant vocal. Mot de réveil hors ligne sur l'autoradio ;
+transcription (Vosk), conversation (agents Overmind : Mistral GE75 / Qwen HoverBot) et voix
+(Piper) sur le serveur Overmind, joint par Internet (redirection Freebox, TLS, CA privée), comme la passerelle MQTT. Lecture seule côté véhicule. Voir
+[docs/AUTORADIO.md](docs/AUTORADIO.md) et [schemas/COPILOT_PROTOCOL.md](schemas/COPILOT_PROTOCOL.md).
+
+**Télécommande** : un serveur MCP local du GE75 (`http://127.0.0.1:8789/mcp`, jeton portée
+`remote`) pilote l'autoradio par sa connexion sortante déjà ouverte : état, journaux, capture,
+faire parler Kitt, musique, lancer une appli, redémarrer Kitt, mise à jour de l'APK confirmée à
+l'écran. Rien n'est ouvert sur l'autoradio ; aucun outil n'agit sur le véhicule.
 
 ## Architecture de l'application Android
 
@@ -85,9 +99,9 @@ Prérequis : JDK 17+, Android SDK 35 (Android Studio ou `sdkmanager`).
 
 ```bash
 cd android
-./gradlew assembleDebug            # → app/build/outputs/apk/debug/app-debug.apk
-./gradlew testDebugUnitTest        # tests JVM (simulateur ELM327 Kotlin intégré)
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+./gradlew assemblePhoneDebug       # → app/build/outputs/apk/phone/debug/app-phone-debug.apk
+./gradlew testPhoneDebugUnitTest   # tests JVM (simulateur ELM327 Kotlin intégré)
+adb install -r app/build/outputs/apk/phone/debug/app-phone-debug.apk
 ```
 
 Sur le téléphone : appairer l'ELM327 dans les réglages Bluetooth Android (PIN `1234`
@@ -130,24 +144,28 @@ ou vers un ELM327 Wi-Fi.
 
 | Suite | Commande | Couverture |
 |---|---|---|
-| Android (JVM) | `cd android && ./gradlew testDebugUnitTest` | décodage PID/DTC, parseur CAN/ISO-TP/KWP, garde-fou lecture seule, session ELM, messages, outbox/reprise, contrôleur (reconnexion, contact coupé) |
-| Serveur | `cd overmind && .venv/bin/python -m pytest tests -q` | validation, dédup, stockage, analyse, MCP, simulateur, bout-en-bout Python, contrat Android |
+| Android (JVM) | `cd android && ./gradlew testPhoneDebugUnitTest testHeadunitDebugUnitTest` | décodage PID/DTC, parseur CAN/ISO-TP/KWP, garde-fou lecture seule, session ELM, messages, outbox/reprise, contrôleur (reconnexion, contact coupé) |
+| Serveur | `cd overmind && .venv/bin/python -m pytest tests -q` | validation, dédup, stockage, analyse, MCP, simulateur, bout-en-bout Python, contrat Android, copilote (garde-fous, lectures directes, protocole WebSocket), télécommande (liste fermée, MCP, mise à jour par morceaux) |
 | Bout-en-bout | `tools/e2e_jvm.sh` | code Kotlin → MQTT → ingestion → API |
 
 ## Sécurité
 
 - **Véhicule** : `ObdCommandGuard` n'autorise que les services 01, 03, 07, 09, 0A et des
-  commandes AT de configuration non persistantes ; 04 (effacement), 08 (actionneurs),
-  services UDS/KWP et `ATPP` sont refusés. La passerelle ne s'abonne à aucun topic MQTT :
-  il n'existe aucun chemin réseau vers le bus du véhicule.
+  commandes AT de configuration non persistantes ; 08 (actionneurs), services UDS/KWP et
+  `ATPP` sont refusés. La passerelle ne s'abonne à aucun topic MQTT : il n'existe aucun
+  chemin réseau vers le bus du véhicule.
+- **Effacement des défauts (mode 04)** : seule écriture possible, par un chemin dédié
+  (`ObdCommandGuard.checkClearDtc` → `ElmConnection.sendClearDtc`), déclenché UNIQUEMENT par
+  le bouton de l'écran Défauts après confirmation, session active, vitesse et régime mesurés
+  à 0 depuis moins de 10 s (moteur coupé, contact mis). Jamais par MQTT, MCP ni Kitt (Kitt
+  renvoie vers l'écran). Les codes sont relus après effacement.
 - **Réseau** : connexion sortante uniquement ; TLS strict obligatoire en mode Internet ;
   un compte MQTT par téléphone avec ACL en écriture seule sur ses propres topics ; le
   serveur vérifie que `gateway_id` est autorisé pour `vehicle_id`.
 - **Serveur** : API et MCP sur `127.0.0.1` (ou l'IP Tailscale) avec jetons Bearer stockés
   en empreinte SHA-256 ; jamais exposés sur Internet.
-- **Diagnostic actif futur** (effacement, tests d'actionneurs) : à concevoir comme un
-  module séparé, local au téléphone, avec confirmation physique, jamais piloté par le
-  réseau de télémétrie.
+- **Diagnostic actif futur** (tests d'actionneurs) : non prévu ; même principe que
+  l'effacement si un jour : local, confirmé à l'écran, jamais piloté par le réseau.
 
 ## Limites connues
 
@@ -157,4 +175,4 @@ ou vers un ELM327 Wi-Fi.
   l'application s'adapte (en-têtes désactivés, repli unitaire) mais certains adaptateurs
   restent instables.
 - Seuls les PID génériques SAE J1979 sont lus ; les PID constructeur (mode 22) ne le sont pas.
-- Mosquitto, TLS 8883 et Tailscale sont documentés mais pas encore déployés sur le serveur.
+- Mosquitto (TLS 8883, CA privée, redirection Freebox 38883) est déployé sur le serveur ; Tailscale reste documenté mais n'est pas utilisé.

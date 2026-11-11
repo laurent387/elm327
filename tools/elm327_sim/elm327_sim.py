@@ -80,6 +80,7 @@ class Engine:
     rng: random.Random = field(default_factory=lambda: random.Random(42))
     # état
     rpm: float = 0
+    engine_off: bool = False
     speed: float = 0
     throttle: float = 0
     load: float = 0
@@ -107,9 +108,11 @@ class Engine:
         else:                                # décélération
             k = (phase - 0.8) / 0.2
             thr, target_rpm, spd = 0, 2400 - 1500 * k, 90 - 85 * k
+        if self.engine_off:                  # contact mis, moteur coupé
+            thr, target_rpm, spd = 0, 0, 0
         j = self.rng.uniform(-1, 1)
         self.throttle = max(0.0, thr + j)
-        self.rpm = max(0.0, target_rpm + 15 * j)
+        self.rpm = 0.0 if self.engine_off else max(0.0, target_rpm + 15 * j)
         self.speed = max(0.0, spd)
         # pression collecteur : dépression au ralenti, suralimentation en pleine charge
         if self.throttle > 80 and self.supercharged:
@@ -140,7 +143,7 @@ def encode_dtc(code: str) -> list[int]:
 class ElmState:
     def __init__(self, args: argparse.Namespace):
         self.args = args
-        self.engine = Engine(lean_bias=args.lean_bias, supercharged=not args.na)
+        self.engine = Engine(lean_bias=args.lean_bias, supercharged=not args.na, engine_off=args.engine_off)
         self.pids = sorted(ENCODERS) if not args.pids else sorted(int(p, 16) for p in args.pids.split(","))
         self.reset()
 
@@ -262,7 +265,11 @@ class ElmState:
                 payload += encode_dtc(c)
             return self.frames(0x7E8, payload)
         if mode == 0x04:
-            return ["?"]  # effacement des défauts volontairement refusé par le simulateur
+            # comme un vrai calculateur : refus (7F 04 22, conditions non remplies) moteur tournant
+            if e.rpm > 0:
+                return self.frames(0x7E8, [0x7F, 0x04, 0x22])
+            self.args.dtc, self.args.pending = [], []
+            return self.frames(0x7E8, [0x44])
         if mode == 0x09 and cmd[2:4] == "02":
             return self.frames(0x7E8, [0x49, 0x02, 0x01] + list(self.args.vin.encode("ascii")))
         if mode == 0x09 and cmd[2:4] == "00":
@@ -349,6 +356,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--lean-bias", type=float, default=0.0, help="%% de correction pauvre ajouté (prise d'air simulée)")
     ap.add_argument("--pids", default="", help="liste hex des PID mode 01 simulés (défaut : tous)")
     ap.add_argument("--no-vehicle", action="store_true", help="contact coupé : UNABLE TO CONNECT")
+    ap.add_argument("--engine-off", action="store_true", help="contact mis moteur coupé (régime et vitesse à 0)")
     ap.add_argument("--vin", default="SIMULATEDVIN00001")
     args = ap.parse_args(argv)
     for c in args.dtc + args.pending + args.permanent:

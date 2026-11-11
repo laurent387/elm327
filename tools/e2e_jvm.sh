@@ -19,7 +19,7 @@ sleep 2
 sleep 3
 
 ( cd "$ROOT/android" && OVERMIND_E2E_ELM="127.0.0.1:$ELM_PORT" OVERMIND_E2E_MQTT="127.0.0.1:$MQTT_PORT" \
-  ./gradlew -q testDebugUnitTest --tests '*JvmEndToEndTest*' --rerun-tasks -i ) | grep -E "E2E|MQTT|FAILED|PASSED" || true
+  ./gradlew -q testPhoneDebugUnitTest --tests '*JvmEndToEndTest*' --rerun-tasks -i ) | grep -E "E2E|MQTT|FAILED|PASSED" || true
 
 sleep 1
 echo "--- API Overmind : dernières valeurs"

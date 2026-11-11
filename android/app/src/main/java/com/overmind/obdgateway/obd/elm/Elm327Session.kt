@@ -234,6 +234,23 @@ class Elm327Session(
         return DtcSnapshot(mil, stored, pending, permanent, clock())
     }
 
+    /**
+     * Effacement des codes défauts (mode 04) puis relecture. Renvoie la nouvelle lecture.
+     * Le calculateur répond 44 ; « NO DATA » ou une réponse négative (7F 04 xx, ex. moteur
+     * tournant) = refus.
+     */
+    fun clearDtcs(): DtcSnapshot {
+        val r = conn.sendClearDtc()
+        if (r.error != null) throw IOException("Effacement refusé : ${r.error.token}")
+        val p = payloads(r)
+        if (p.none { it.bytes.isNotEmpty() && it.bytes[0] == 0x44 }) {
+            val neg = p.firstOrNull { it.bytes.size >= 3 && it.bytes[0] == 0x7F && it.bytes[1] == 0x04 }
+            throw IOException(if (neg != null) "Effacement refusé par le calculateur (code %02X)".format(neg.bytes[2])
+                              else "Effacement : réponse inattendue")
+        }
+        return readDtcs()
+    }
+
     /** VIN (service 09 PID 02). Renvoie null si non disponible. */
     fun readVin(): String? = runCatching {
         val r = conn.send("0902", 5_000)

@@ -51,8 +51,14 @@ class ElmConnection(private val transport: ObdTransport) {
     private val buf = ByteArray(1024)
 
     @Synchronized
-    fun send(command: String, timeoutMs: Long = DEFAULT_TIMEOUT_MS): ElmResponse {
-        val cmd = ObdCommandGuard.check(command)
+    fun send(command: String, timeoutMs: Long = DEFAULT_TIMEOUT_MS): ElmResponse =
+        exchange(ObdCommandGuard.check(command), timeoutMs)
+
+    /** Effacement des codes défauts (mode 04) : seul chemin d'écriture, voir [ObdCommandGuard.checkClearDtc]. */
+    @Synchronized
+    fun sendClearDtc(timeoutMs: Long = 10_000): ElmResponse = exchange(ObdCommandGuard.checkClearDtc("04"), timeoutMs)
+
+    private fun exchange(cmd: String, timeoutMs: Long): ElmResponse {
         drain()
         val t0 = System.nanoTime()
         transport.write((cmd + "\r").toByteArray(Charsets.US_ASCII))

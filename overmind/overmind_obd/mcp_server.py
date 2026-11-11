@@ -128,17 +128,17 @@ def build_mcp(queries: ObdQueries, host: str = "127.0.0.1", port: int = 8796,
 
 
 class BearerMiddleware:
-    """Exige `Authorization: Bearer <jeton mcp>` sur toutes les requêtes HTTP."""
+    """Exige `Authorization: Bearer <jeton>` (portée `scope`) sur toutes les requêtes HTTP."""
 
-    def __init__(self, app, tokens: TokenStore):
-        self.app, self.tokens = app, tokens
+    def __init__(self, app, tokens: TokenStore, scope: str = "mcp"):
+        self.app, self.tokens, self.scope = app, tokens, scope
 
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http":
             headers = dict(scope.get("headers") or [])
             raw = headers.get(b"authorization", b"").decode("latin-1")
             token = raw[7:].strip() if raw.lower().startswith("bearer ") else None
-            if not self.tokens.check(token, "mcp"):
+            if not self.tokens.check(token, self.scope):
                 await send({"type": "http.response.start", "status": 401,
                             "headers": [(b"content-type", b"application/json"), (b"www-authenticate", b"Bearer")]})
                 await send({"type": "http.response.body", "body": b'{"error":"unauthorized"}'})

@@ -9,7 +9,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import com.overmind.obdgateway.ui.LocalDisplayProfile
+import com.overmind.obdgateway.ui.rememberDisplayProfile
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -77,29 +88,48 @@ class MainActivity : ComponentActivity() {
                     if (perms.isNotEmpty()) launcher.launch(perms.toTypedArray())
                 }
                 androidx.compose.runtime.LaunchedEffect(Unit) { if (!btGranted) request() }
-                Scaffold(
-                    containerColor = OvermindColors.Bg,
-                    bottomBar = {
-                        NavigationBar(containerColor = OvermindColors.Surface) {
-                            Tab.entries.forEach { t ->
-                                NavigationBarItem(
-                                    selected = tab == t, onClick = { tab = t },
-                                    icon = { Icon(t.icon, contentDescription = t.label) },
-                                    label = { Text(t.label, fontSize = 10.sp) },
-                                )
+                val profile = rememberDisplayProfile()
+                val content: @Composable () -> Unit = {
+                    when (tab) {
+                        Tab.DASHBOARD -> DashboardScreen(vm)
+                        Tab.CONNECTION -> ConnectionScreen(vm, btGranted, request)
+                        Tab.LIVE -> LiveDataScreen(vm)
+                        Tab.DTC -> DtcScreen(vm)
+                        Tab.HISTORY -> HistoryScreen(vm)
+                        Tab.SETTINGS -> SettingsScreen(vm)
+                    }
+                }
+                CompositionLocalProvider(LocalDisplayProfile provides profile) {
+                    if (profile.landscape) {
+                        // Autoradio / paysage : navigation latérale, toute la hauteur pour le contenu.
+                        Row(Modifier.fillMaxSize().background(OvermindColors.Bg)) {
+                            NavigationRail(containerColor = OvermindColors.Surface,
+                                modifier = Modifier.fillMaxHeight().verticalScroll(rememberScrollState())) {
+                                Tab.entries.forEach { t ->
+                                    NavigationRailItem(
+                                        selected = tab == t, onClick = { tab = t },
+                                        icon = { Icon(t.icon, contentDescription = t.label) },
+                                        label = if (profile.heightDp >= 360) ({ Text(t.label, fontSize = 11.sp, maxLines = 1) }) else null,
+                                    )
+                                }
                             }
+                            Box(Modifier.fillMaxSize()) { content() }
                         }
-                    },
-                ) { pad ->
-                    Box(Modifier.fillMaxSize().padding(pad)) {
-                        when (tab) {
-                            Tab.DASHBOARD -> DashboardScreen(vm)
-                            Tab.CONNECTION -> ConnectionScreen(vm, btGranted, request)
-                            Tab.LIVE -> LiveDataScreen(vm)
-                            Tab.DTC -> DtcScreen(vm)
-                            Tab.HISTORY -> HistoryScreen(vm)
-                            Tab.SETTINGS -> SettingsScreen(vm)
-                        }
+                    } else {
+                        Scaffold(
+                            containerColor = OvermindColors.Bg,
+                            bottomBar = {
+                                NavigationBar(containerColor = OvermindColors.Surface) {
+                                    Tab.entries.forEach { t ->
+                                        NavigationBarItem(
+                                            selected = tab == t, onClick = { tab = t },
+                                            icon = { Icon(t.icon, contentDescription = t.label) },
+                                            label = { Text(t.label, fontSize = 10.sp, maxLines = 1, softWrap = false) },
+                                        )
+                                    }
+                                }
+                            },
+                        ) { pad -> Box(Modifier.fillMaxSize().padding(pad)) { content() } }
                     }
                 }
             }

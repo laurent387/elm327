@@ -61,6 +61,9 @@ data class GatewayUiState(
     val live: Map<String, LiveValue> = emptyMap(),
     val lastDtc: DtcSnapshot? = null,
     val dtcReading: Boolean = false,
+    val dtcClearing: Boolean = false,
+    /** Résultat du dernier effacement (succès ou raison du refus), affiché dans l'écran Défauts. */
+    val dtcClearResult: String? = null,
     val lastError: String? = null,
     val cycleMs: Long? = null,
     val log: List<String> = emptyList(),
@@ -99,6 +102,17 @@ class GatewayController(
     private var pendingMsgCount = 0
 
     fun requestDtcRead() { dtcRequested.set(true) }
+
+    private val clearRequested = AtomicBoolean(false)
+
+    /**
+     * Demande d'effacement des défauts, depuis le bouton de l'écran Défauts uniquement (après
+     * confirmation). Exécutée dans la boucle d'acquisition, si [clearBlocker] ne trouve rien à redire.
+     */
+    fun requestDtcClear() {
+        _state.update { it.copy(dtcClearResult = null) }
+        clearRequested.set(true)
+    }
 
     fun log(msg: String) {
         val line = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + "  " + msg
@@ -222,7 +236,10 @@ class GatewayController(
                 emit(msg)
                 updateLive(readings, msg)
             }
-            if (dtcRequested.getAndSet(false) || t0 - lastDtc >= s.dtcIntervalS * 1000 || lastDtc == 0L) {
+            if (clearRequested.getAndSet(false)) {
+                clearDtc(elm, sessionId)
+                lastDtc = clock()
+            } else if (dtcRequested.getAndSet(false) || t0 - lastDtc >= s.dtcIntervalS * 1000 || lastDtc == 0L) {
                 readDtc(elm, sessionId)
                 lastDtc = clock()
             }
@@ -233,6 +250,35 @@ class GatewayController(
             val elapsed = clock() - t0
             _state.update { it.copy(cycleMs = elapsed) }
             if (elapsed < s.pollIntervalMs) sleep(s.pollIntervalMs - elapsed)
+        }
+    }
+
+    private fun clearDtc(elm: Elm327Session, sessionId: String) {
+        val blocker = clearBlocker(_state.value, clock())
+        if (blocker != null) {
+            _state.update { it.copy(dtcClearResult = "Effacement refusé : $blocker") }
+            log("Effacement des défauts refusé : $blocker")
+            return
+        }
+        val before = _state.value.lastDtc
+        _state.update { it.copy(dtcClearing = true) }
+        try {
+            log("Effacement des défauts (mode 04) demandé depuis l'écran Défauts")
+            val snap = elm.clearDtcs()
+            emit(messageFactory.dtc(sessionId, snap))
+            _state.update { it.copy(lastDtc = snap) }
+            val erased = before?.let { (it.stored + it.pending).map { d -> d.code }.distinct() }.orEmpty()
+            val left = snap.stored.size + snap.pending.size
+            val msg = "Défauts effacés" + (if (erased.isNotEmpty()) " (${erased.joinToString()})" else "") +
+                (if (left > 0) ". $left code(s) toujours présent(s) : le défaut est encore actif." else ".")
+            _state.update { it.copy(dtcClearResult = msg) }
+            log(msg)
+        } catch (e: Exception) {
+            val msg = "Effacement impossible : ${e.message}"
+            _state.update { it.copy(dtcClearResult = msg) }
+            log(msg)
+        } finally {
+            _state.update { it.copy(dtcClearing = false) }
         }
     }
 
@@ -272,4 +318,18 @@ class GatewayController(
 
     private fun boostFrom(msg: OutgoingMessage): Double? =
         Regex("\"${PidCatalog.BOOST_KEY}\":(-?[0-9.]+)").find(msg.payload)?.groupValues?.get(1)?.toDoubleOrNull()
+}
+
+/**
+ * Conditions de l'effacement des défauts : session active, véhicule à l'arrêt et moteur coupé,
+ * MESURÉS il y a moins de [maxAgeMs] (contact mis). Renvoie la raison du refus, ou null si permis.
+ */
+fun clearBlocker(s: GatewayUiState, nowMs: Long, maxAgeMs: Long = 10_000): String? {
+    if (s.obdState != ObdState.RUNNING) return "aucune session OBD en cours"
+    fun fresh(key: String): Double? = s.live[key]?.takeIf { it.status == "ok" && nowMs - it.timestampMs in 0..maxAgeMs }?.value
+    val speed = fresh("speed_kmh") ?: return "vitesse du véhicule inconnue"
+    if (speed > 0.0) return "le véhicule roule"
+    val rpm = fresh("rpm") ?: return "régime moteur inconnu"
+    if (rpm > 0.0) return "le moteur tourne : coupe le moteur, laisse le contact mis"
+    return null
 }

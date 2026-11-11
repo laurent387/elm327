@@ -1,7 +1,8 @@
 package com.overmind.obdgateway.obd.elm
 
 /**
- * Garde-fou LECTURE SEULE. Toute commande envoyée à l'ELM327 passe par ici.
+ * Garde-fou. Toute commande envoyée à l'ELM327 passe par ici. En dehors d'UNE exception
+ * (effacement des défauts, voir [checkClearDtc]), tout est en lecture seule.
  *
  * Autorisé : configuration non persistante de l'ELM (AT…) et services OBD de lecture
  * 01 (données courantes), 03 (DTC confirmés), 07 (DTC en attente), 09 (VIN / infos),
@@ -24,6 +25,18 @@ object ObdCommandGuard {
     private val hex = Regex("^[0-9A-F]+$")
 
     class ForbiddenCommandException(cmd: String) : SecurityException("Commande OBD interdite (lecture seule) : $cmd")
+
+    /**
+     * Seule commande d'écriture autorisée : « 04 » (effacement des codes défauts, norme OBD2).
+     * Elle n'est accessible que par [ElmConnection.sendClearDtc], appelé uniquement depuis le
+     * bouton de l'écran Défauts sur le téléphone/l'autoradio, après confirmation, véhicule à
+     * l'arrêt moteur coupé. Aucun chemin réseau (MQTT, MCP, Kitt) n'y mène.
+     */
+    fun checkClearDtc(raw: String): String {
+        val cmd = raw.trim().uppercase().replace(" ", "")
+        if (cmd != "04") throw ForbiddenCommandException(raw)
+        return cmd
+    }
 
     fun check(raw: String): String {
         val cmd = raw.trim().uppercase().replace(" ", "")
