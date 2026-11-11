@@ -19,6 +19,15 @@ Véhicule ─OBD2─ ELM327 ─Bluetooth SPP─ Android « Overmind OBD » ─MQ
                                                                                └▶ Overmind Mechanic / ChatGPT (connecteur)
 ```
 
+## 📥 Télécharger l'APK autoradio « Overmind Kitt »
+
+**[⬇️ overmind-kitt-autoradio.apk](https://github.com/laurent387/elm327/releases/download/kitt-v0.1.0-test/overmind-kitt-autoradio.apk)**
+(pré-version de test, Android 9+ ARM, 68 Mo — [page de la version](https://github.com/laurent387/elm327/releases/tag/kitt-v0.1.0-test))
+
+Ouvrir ce lien dans le navigateur de l'autoradio, autoriser l'installation, puis saisir
+l'adresse du serveur Overmind et le jeton dans **Réglages Kitt**. L'APK ne contient aucun
+jeton ni adresse.
+
 ## Contenu du dépôt
 
 | Dossier | Contenu |
